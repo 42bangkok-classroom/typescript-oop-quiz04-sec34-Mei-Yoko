@@ -1,80 +1,50 @@
-import { Injectable } from "@nestjs/common";
-import { IMission } from "./mission.interface";
-import { readFileSync } from "fs";
+import { Injectable } from '@nestjs/common';
+import { IMission } from './mission.interface';
+import * as fs from 'fs';
+import * as path from 'path';
 
 @Injectable()
 export class MissionService {
-  private readonly mission = [
-    { id: 1, codename: "OPERATION_STORM", status: "ACTIVE" },
-    { id: 2, codename: "SILENT_SNAKE", status: "COMPLETED" },
-    { id: 3, codename: "RED_DAWN", status: "FAILED" },
-    { id: 4, codename: "BLACKOUT", status: "ACTIVE" },
-    { id: 5, codename: "ECHO_FALLS", status: "COMPLETED" },
-    { id: 6, codename: "GHOST_RIDER", status: "COMPLETED" },
+  private readonly missions = [
+    { id: 1, codename: 'OPERATION_STORM', status: 'ACTIVE' },
+    { id: 2, codename: 'SILENT_SNAKE', status: 'COMPLETED' },
+    { id: 3, codename: 'RED_DAWN', status: 'FAILED' },
+    { id: 4, codename: 'BLACKOUT', status: 'ACTIVE' },
+    { id: 5, codename: 'ECHO_FALLS', status: 'COMPLETED' },
+    { id: 6, codename: 'GHOST_RIDER', status: 'COMPLETED' },
   ];
 
-  getSummary() {
-    const res = {
-      ACTIVE: 0,
-      COMPLETED: 0,
-      FAILED: 0,
-    };
-    for (let i = 0; i < this.mission.length; i++) {
-      const data = this.mission[i];
-      if (data.status in res) {
-        res[data.status as keyof typeof res]++;
+  getSummary(): Record<string, number> {
+    return this.missions.reduce((acc, mission) => {
+      if (!acc[mission.status]) {
+        acc[mission.status] = 0;
       }
-    }
-    return res;
+      acc[mission.status]++;
+      return acc;
+    }, {} as Record<string, number>);
   }
 
-  create(mission: IMission) {
-    const data = readFileSync("missions.json", "utf-8");
-    const missions: IMission[] = JSON.parse(data);
-    missions.push({...mission,
-      id: (missions.length + 1).toString(),
-      status: "ACTIVE",
-      endDate: null,
-    });
-    return mission;
-  }
+  findAll(): (IMission & { durationDays: number })[] {
+    const filePath = path.join(process.cwd(), 'data', 'missions.json');
 
-  findAll() {
-    const data = readFileSync("missions.json", "utf-8");
-    const missions: IMission[] = JSON.parse(data);
-    missions.map(d=>{
-      let durationDays = -1
-      if (d.startDate && d.endDate) {
-        const start = new Date(d.startDate);
-        const end = new Date(d.endDate);
-        durationDays = (end.getTime() - start.getTime())/86400000;
-      }
-      return {
-        ...d,
-        durationDays
-      }
-    })
-    return missions;
-  }
+    const rawData = fs.readFileSync(filePath, 'utf-8');
+    const missions: IMission[] = JSON.parse(rawData);
 
-  findOne(id: string, clearance: string = "STANDARD") {
-    const data = readFileSync("missions.json", "utf-8");
-    const missions: IMission[] = JSON.parse(data);
-    const mission = missions.find((m) => m.id === id)!;
-    if (!mission) {
-      return null;
-    } else if (mission.riskLevel == "HIGH") {
-    if (clearance == "SECRET") {
+    return missions.map((mission) => {
+      let durationDays = -1;
+
+      if (mission.endDate) {
+        const start = new Date(mission.startDate).getTime();
+        const end = new Date(mission.endDate).getTime();
+
+        const diffMs = end - start;
+        durationDays = diffMs / (1000 * 60 * 60 * 24);
+      }
+
       return {
         ...mission,
-        targetName: "***REDACTED***",
+        durationDays,
       };
-    } else if (clearance == "TOP_SECRET") {
-      return mission;
-    } else {
-      return null;
-    }
-  }
-    return mission;
+    });
   }
 }

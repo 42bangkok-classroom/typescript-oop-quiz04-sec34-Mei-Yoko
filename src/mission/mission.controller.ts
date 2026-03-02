@@ -1,20 +1,17 @@
-import { Body, Controller, Get, Post, Query } from "@nestjs/common";
-import { MissionService } from "./mission.service";
-import * as missionInterface from "./mission.interface";
+import { Controller, Get } from '@nestjs/common';
+import { MissionService } from './mission.service';
 
-@Controller("missions")
+@Controller('missions')
 export class MissionController {
   constructor(private readonly missionService: MissionService) {}
-  @Get("summary")
-  getSummary() {
+
+  @Get('summary')
+  getMissionSummary() {
     return this.missionService.getSummary();
   }
-  @Get(":id")
-  getMissionById(id: string, @Query("clearance") clearance?: string) {
-    return this.missionService.findOne(id, clearance);
-  }
-  @Post()
-  createMission(@Body() mission: missionInterface.IMission) {
-    return this.missionService.create(mission);
+
+  @Get()
+  findAll() {
+    return this.missionService.findAll();
   }
 }
