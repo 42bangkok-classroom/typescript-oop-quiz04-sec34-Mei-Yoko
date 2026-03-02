@@ -7,3 +7,7 @@ export interface IMission {
     startDate: string;
     endDate: string | null;
   }
+  
+  export interface IMissionResponse extends IMission {
+    durationDays: number;
+  }

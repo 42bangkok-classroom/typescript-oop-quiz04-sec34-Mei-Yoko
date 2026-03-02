@@ -1,4 +1,4 @@
-import { Controller, Get, Param, Query } from '@nestjs/common';
+import { Controller, Get } from '@nestjs/common';
 import { MissionService } from './mission.service';
 
 @Controller('missions')
@@ -11,15 +11,7 @@ export class MissionController {
   }
 
   @Get('summary')
-  getMissionSummary() {
+  getSummary() {
     return this.missionService.getSummary();
-  }
-
-  @Get(':id')
-  findOne(
-    @Param('id') id: string,
-    @Query('clearance') clearance?: string,
-  ) {
-    return this.missionService.findOne(id, clearance ?? 'STANDARD');
   }
 }

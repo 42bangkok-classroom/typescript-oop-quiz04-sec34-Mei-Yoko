@@ -1,7 +1,7 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
-import { IMission } from './mission.interface';
+import { Injectable } from '@nestjs/common';
 import * as fs from 'fs';
 import * as path from 'path';
+import { IMission, IMissionResponse } from './mission.interface';
 
 @Injectable()
 export class MissionService {
@@ -14,46 +14,31 @@ export class MissionService {
     { id: 6, codename: 'GHOST_RIDER', status: 'COMPLETED' },
   ];
 
-  private readonly dataPath = path.join(
-    process.cwd(),
-    'data',
-    'missions.json',
-  );
-
   getSummary(): Record<string, number> {
-    return this.missions.reduce<Record<string, number>>(
-      (acc, mission) => {
-        if (!acc[mission.status]) {
-          acc[mission.status] = 0;
-        }
-
-        acc[mission.status]++;
-
+    return this.missions.reduce(
+      (acc: Record<string, number>, mission) => {
+        const status = mission.status;
+        acc[status] = (acc[status] || 0) + 1;
         return acc;
       },
-      {},
+      {} as Record<string, number>,
     );
   }
 
-  private readMissions(): IMission[] {
-    const raw = fs.readFileSync(this.dataPath, 'utf-8');
+  findAll(): IMissionResponse[] {
+    const filePath = path.join(process.cwd(), 'data', 'missions.json');
 
-    return JSON.parse(raw) as IMission[];
-  }
+    const fileData = fs.readFileSync(filePath, 'utf-8');
+    const missionsFromJson = JSON.parse(fileData) as IMission[];
 
-  findAll(): Array<IMission & { durationDays: number }> {
-    const missions = this.readMissions();
-
-    return missions.map((mission) => {
+    return missionsFromJson.map((mission) => {
       let durationDays = -1;
 
-      if (mission.endDate) {
+      if (mission.endDate !== null) {
         const start = new Date(mission.startDate).getTime();
         const end = new Date(mission.endDate).getTime();
-
-        const diffMs = end - start;
-
-        durationDays = diffMs / (1000 * 60 * 60 * 24);
+        const diffTime = end - start;
+        durationDays = diffTime / (1000 * 60 * 60 * 24);
       }
 
       return {
@@ -61,28 +46,5 @@ export class MissionService {
         durationDays,
       };
     });
-  }
-
-  findOne(id: string, clearance = 'STANDARD'): IMission {
-    const missions = this.readMissions();
-
-    const mission = missions.find((m) => m.id === id);
-
-    if (!mission) {
-      throw new NotFoundException(`Mission with id ${id} not found`);
-    }
-
-    const result: IMission = { ...mission };
-
-    const highRiskLevels = ['HIGH', 'CRITICAL'];
-
-    const isHighRisk = highRiskLevels.includes(result.riskLevel);
-    const hasTopClearance = clearance === 'TOP_SECRET';
-
-    if (isHighRisk && !hasTopClearance) {
-      result.targetName = '***REDACTED***';
-    }
-
-    return result;
   }
 }
