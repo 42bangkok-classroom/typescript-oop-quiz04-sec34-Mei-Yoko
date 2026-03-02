@@ -1,17 +1,12 @@
 import { Controller, Get } from '@nestjs/common';
 import { MissionService } from './mission.service';
 
-@Controller('missions')
+@Controller('mission')
 export class MissionController {
   constructor(private readonly missionService: MissionService) {}
 
-  @Get()
-  findAll() {
-    return this.missionService.findAll();
-  }
-
   @Get('summary')
-  getSummary() {
+  getMissionSummary() {
     return this.missionService.getSummary();
   }
 }

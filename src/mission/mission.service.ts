@@ -1,7 +1,4 @@
 import { Injectable } from '@nestjs/common';
-import * as fs from 'fs';
-import * as path from 'path';
-import { IMission, IMissionResponse } from './mission.interface';
 
 @Injectable()
 export class MissionService {
@@ -14,37 +11,13 @@ export class MissionService {
     { id: 6, codename: 'GHOST_RIDER', status: 'COMPLETED' },
   ];
 
-  getSummary(): Record<string, number> {
+  getSummary() {
     return this.missions.reduce(
-      (acc: Record<string, number>, mission) => {
-        const status = mission.status;
-        acc[status] = (acc[status] || 0) + 1;
-        return acc;
+      (summary, mission) => {
+        summary[mission.status] = (summary[mission.status] || 0) + 1;
+        return summary;
       },
       {} as Record<string, number>,
     );
-  }
-
-  findAll(): IMissionResponse[] {
-    const filePath = path.join(process.cwd(), 'data', 'missions.json');
-
-    const fileData = fs.readFileSync(filePath, 'utf-8');
-    const missionsFromJson = JSON.parse(fileData) as IMission[];
-
-    return missionsFromJson.map((mission) => {
-      let durationDays = -1;
-
-      if (mission.endDate !== null) {
-        const start = new Date(mission.startDate).getTime();
-        const end = new Date(mission.endDate).getTime();
-        const diffTime = end - start;
-        durationDays = diffTime / (1000 * 60 * 60 * 24);
-      }
-
-      return {
-        ...mission,
-        durationDays,
-      };
-    });
   }
 }
