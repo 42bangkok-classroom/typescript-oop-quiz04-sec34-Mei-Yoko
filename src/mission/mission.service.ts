@@ -1,4 +1,4 @@
-import { Injectable } from "@nestjs/common";
+import { Injectable, NotFoundException } from "@nestjs/common";
 import { IMission } from "./mission.interface";
 import * as fs from "fs";
 
@@ -52,14 +52,13 @@ export class MissionService {
         : -1,
     }));
   }
-  //
 
   findOne(id: string, clearance: string = "STANDARD") {
     const data = fs.readFileSync("data/missions.json", "utf8");
     const missions = JSON.parse(data) as IMission[];
     const mission = missions.find((m) => m.id === id)!;
     if (!mission) {
-      return null;
+      throw new NotFoundException("for unknown id");
     } else if (mission.riskLevel == "HIGH") {
       if (clearance == "SECRET") {
         return {
@@ -69,7 +68,7 @@ export class MissionService {
       } else if (clearance == "TOP_SECRET") {
         return mission;
       } else {
-        return null;
+        throw new NotFoundException("for insufficient clearance");
       }
     }
     return mission;
