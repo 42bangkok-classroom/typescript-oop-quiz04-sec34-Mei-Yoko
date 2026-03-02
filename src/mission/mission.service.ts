@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { IMission } from './mission.interface';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -14,21 +14,35 @@ export class MissionService {
     { id: 6, codename: 'GHOST_RIDER', status: 'COMPLETED' },
   ];
 
+  private readonly dataPath = path.join(
+    process.cwd(),
+    'data',
+    'missions.json',
+  );
+
   getSummary(): Record<string, number> {
-    return this.missions.reduce((acc, mission) => {
-      if (!acc[mission.status]) {
-        acc[mission.status] = 0;
-      }
-      acc[mission.status]++;
-      return acc;
-    }, {} as Record<string, number>);
+    return this.missions.reduce<Record<string, number>>(
+      (acc, mission) => {
+        if (!acc[mission.status]) {
+          acc[mission.status] = 0;
+        }
+
+        acc[mission.status]++;
+
+        return acc;
+      },
+      {},
+    );
   }
 
-  findAll(): (IMission & { durationDays: number })[] {
-    const filePath = path.join(process.cwd(), 'data', 'missions.json');
+  private readMissions(): IMission[] {
+    const raw = fs.readFileSync(this.dataPath, 'utf-8');
 
-    const rawData = fs.readFileSync(filePath, 'utf-8');
-    const missions: IMission[] = JSON.parse(rawData);
+    return JSON.parse(raw) as IMission[];
+  }
+
+  findAll(): Array<IMission & { durationDays: number }> {
+    const missions = this.readMissions();
 
     return missions.map((mission) => {
       let durationDays = -1;
@@ -38,6 +52,7 @@ export class MissionService {
         const end = new Date(mission.endDate).getTime();
 
         const diffMs = end - start;
+
         durationDays = diffMs / (1000 * 60 * 60 * 24);
       }
 
@@ -46,5 +61,28 @@ export class MissionService {
         durationDays,
       };
     });
+  }
+
+  findOne(id: string, clearance = 'STANDARD'): IMission {
+    const missions = this.readMissions();
+
+    const mission = missions.find((m) => m.id === id);
+
+    if (!mission) {
+      throw new NotFoundException(`Mission with id ${id} not found`);
+    }
+
+    const result: IMission = { ...mission };
+
+    const highRiskLevels = ['HIGH', 'CRITICAL'];
+
+    const isHighRisk = highRiskLevels.includes(result.riskLevel);
+    const hasTopClearance = clearance === 'TOP_SECRET';
+
+    if (isHighRisk && !hasTopClearance) {
+      result.targetName = '***REDACTED***';
+    }
+
+    return result;
   }
 }
