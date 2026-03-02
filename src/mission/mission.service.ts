@@ -1,4 +1,3 @@
-/* eslint-disable */
 import { Injectable } from "@nestjs/common";
 import { IMission } from "./mission.interface";
 import { readFileSync } from "fs";
@@ -29,6 +28,17 @@ export class MissionService {
     return res;
   }
 
+  create(mission: IMission) {
+    const data = readFileSync("missions.json", "utf-8");
+    const missions: IMission[] = JSON.parse(data);
+    missions.push({...mission,
+      id: (missions.length + 1).toString(),
+      status: "ACTIVE",
+      endDate: null,
+    });
+    return mission;
+  }
+
   findAll() {
     const data = readFileSync("missions.json", "utf-8");
     const missions: IMission[] = JSON.parse(data);
@@ -37,7 +47,7 @@ export class MissionService {
       if (d.startDate && d.endDate) {
         const start = new Date(d.startDate);
         const end = new Date(d.endDate);
-        durationDays = Math.ceil((end.getTime() - start.getTime()) /86400000);
+        durationDays = (end.getTime() - start.getTime())/86400000;
       }
       return {
         ...d,
@@ -45,5 +55,26 @@ export class MissionService {
       }
     })
     return missions;
+  }
+
+  findOne(id: string, clearance: string = "STANDARD") {
+    const data = readFileSync("missions.json", "utf-8");
+    const missions: IMission[] = JSON.parse(data);
+    const mission = missions.find((m) => m.id === id)!;
+    if (!mission) {
+      return null;
+    } else if (mission.riskLevel == "HIGH") {
+    if (clearance == "SECRET") {
+      return {
+        ...mission,
+        targetName: "***REDACTED***",
+      };
+    } else if (clearance == "TOP_SECRET") {
+      return mission;
+    } else {
+      return null;
+    }
+  }
+    return mission;
   }
 }
